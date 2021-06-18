@@ -197,9 +197,10 @@ pub struct Parts<T> {
 // ========== internal client api
 
 // A `SendRequest` that can be cloned to send HTTP2 requests.
+// private for now, probably not a great idea of a type...
 #[must_use = "futures do nothing unless polled"]
 #[cfg(feature = "http2")]
-pub struct Http2SendRequest<B> {
+pub(super) struct Http2SendRequest<B> {
     dispatch: dispatch::UnboundedSender<Request<B>, Response<Body>>,
 }
 
@@ -213,7 +214,7 @@ impl<B> SendRequest<B> {
         self.dispatch.poll_ready(cx)
     }
 
-    pub async fn when_ready(self) -> crate::Result<Self> {
+    pub(super) async fn when_ready(self) -> crate::Result<Self> {
         let mut me = Some(self);
         future::poll_fn(move |cx| {
             ready!(me.as_mut().unwrap().poll_ready(cx))?;
@@ -222,16 +223,16 @@ impl<B> SendRequest<B> {
         .await
     }
 
-    pub fn is_ready(&self) -> bool {
+    pub(super) fn is_ready(&self) -> bool {
         self.dispatch.is_ready()
     }
 
-    pub fn is_closed(&self) -> bool {
+    pub(super) fn is_closed(&self) -> bool {
         self.dispatch.is_closed()
     }
 
     #[cfg(feature = "http2")]
-    pub fn into_http2(self) -> Http2SendRequest<B> {
+    pub(super) fn into_http2(self) -> Http2SendRequest<B> {
         Http2SendRequest {
             dispatch: self.dispatch.unbound(),
         }
@@ -296,7 +297,7 @@ where
         ResponseFuture { inner }
     }
 
-    pub fn send_request_retryable(
+    pub(super) fn send_request_retryable(
         &mut self,
         req: Request<B>,
     ) -> impl Future<Output = Result<Response<Body>, (crate::Error, Option<Request<B>>)>> + Unpin
@@ -350,11 +351,11 @@ impl<B> fmt::Debug for SendRequest<B> {
 
 #[cfg(feature = "http2")]
 impl<B> Http2SendRequest<B> {
-    pub fn is_ready(&self) -> bool {
+    pub(super) fn is_ready(&self) -> bool {
         self.dispatch.is_ready()
     }
 
-    pub fn is_closed(&self) -> bool {
+    pub(super) fn is_closed(&self) -> bool {
         self.dispatch.is_closed()
     }
 }
@@ -364,7 +365,7 @@ impl<B> Http2SendRequest<B>
 where
     B: HttpBody + 'static,
 {
-    pub fn send_request_retryable(
+    pub(super) fn send_request_retryable(
         &mut self,
         req: Request<B>,
     ) -> impl Future<Output = Result<Response<Body>, (crate::Error, Option<Request<B>>)>>
